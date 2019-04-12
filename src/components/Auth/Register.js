@@ -9,11 +9,103 @@ import {
   Icon
 } from "semantic-ui-react";
 import { Link } from "react-router-dom";
+import firebase from "../../firebase";
 
 class Register extends Component {
-  state = {};
-  handleChange = () => {};
+  state = {
+    username: "",
+    email: "",
+    password: "",
+    passwordConfirmation: "",
+    errors: [],
+    loading: false
+  };
+
+  displayErrors = errors =>
+    errors.map((error, i) => <p key={i}>{error.message}</p>);
+
+  handleChange = event => {
+    this.setState({ [event.target.name]: event.target.value });
+  };
+
+  isFormValid = () => {
+    let errors = [];
+    let error;
+
+    if (this.isFormEmpty(this.state)) {
+      error = { message: "Fill in all fields" };
+      this.setState({ errors: errors.concat(error) });
+      return false;
+    } else if (!this.isPasswordValid(this.state)) {
+      error = {
+        message:
+          "Password is shorter than 6 characters or does not match confirmation"
+      };
+      this.setState({ errors: errors.concat(error) });
+      return false;
+    } else {
+      // form valid
+      return true;
+    }
+  };
+
+  isFormEmpty = ({ username, email, password, passwordConfirmation }) => {
+    return (
+      !username.length ||
+      !email.length ||
+      !password.length ||
+      !passwordConfirmation.length
+    );
+  };
+
+  isPasswordValid = ({ password, passwordConfirmation }) => {
+    if (password.length < 6 || passwordConfirmation.length < 6) {
+      return false;
+    } else if (password !== passwordConfirmation) {
+      return false;
+    } else {
+      return true;
+    }
+  };
+
+  handleSubmit = event => {
+    event.preventDefault();
+
+    if (this.isFormValid()) {
+      this.setState({ errors: [], loading: true });
+      firebase
+        .auth()
+        .createUserWithEmailAndPassword(this.state.email, this.state.password)
+        .then(createdUser => {
+          console.log(createdUser);
+          this.setState({ loading: false });
+        })
+        .catch(err => {
+          console.error(err);
+          this.setState({
+            errors: this.state.errors.concat(err),
+            loading: false
+          });
+        });
+    }
+  };
+
+  handleInputError = (errors, inputName) => {
+    return errors.some(error => error.message.toLowerCase().includes(inputName))
+      ? "error"
+      : "";
+  };
+
   render() {
+    const {
+      username,
+      email,
+      password,
+      passwordConfirmation,
+      errors,
+      loading
+    } = this.state;
+
     return (
       <Grid textAlign="center" verticalAlign="middle" className="app">
         <Grid.Column style={{ maxWidth: 450 }}>
@@ -21,7 +113,13 @@ class Register extends Component {
             <Icon name="puzzle piece" color="red" />
             Register for Switch Messaging
           </Header>
-          <Form size="large">
+          {errors.length > 0 && (
+            <Message error>
+              <h3>Error</h3>
+              {this.displayErrors(errors)}
+            </Message>
+          )}
+          <Form size="large" onSubmit={this.handleSubmit}>
             <Segment stacked>
               <Form.Input
                 fluid
@@ -31,6 +129,8 @@ class Register extends Component {
                 iconPosition="left"
                 placeholder="Username"
                 onChange={this.handleChange}
+                value={username}
+                className={this.handleInputError(errors, "username")}
                 type="text"
               />
               <Form.Input
@@ -41,6 +141,8 @@ class Register extends Component {
                 iconPosition="left"
                 placeholder="Email Address"
                 onChange={this.handleChange}
+                value={email}
+                className={this.handleInputError(errors, "email")}
                 type="text"
               />
               <Form.Input
@@ -51,6 +153,8 @@ class Register extends Component {
                 iconPosition="left"
                 placeholder="Password"
                 onChange={this.handleChange}
+                value={password}
+                className={this.handleInputError(errors, "password")}
                 type="password"
               />
               <Form.Input
@@ -61,13 +165,22 @@ class Register extends Component {
                 iconPosition="left"
                 placeholder="Password Confirmation"
                 onChange={this.handleChange}
+                className={this.handleInputError(errors, "password")}
+                value={passwordConfirmation}
                 type="password"
               />
-              <Button color="red" fluid size="large">
+              <Button
+                disabled={loading}
+                className={loading ? "loading" : ""}
+                color="red"
+                fluid
+                size="large"
+              >
                 Submit
               </Button>
             </Segment>
           </Form>
+
           <Message>
             Already a user? <Link to="/login">Login</Link>
           </Message>
