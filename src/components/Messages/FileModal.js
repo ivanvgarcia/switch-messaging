@@ -24,6 +24,7 @@ export class FileModal extends Component {
       if (this.isAuthorized(file.name)) {
         const metadata = { contentType: mime.lookup(file.name) };
         uploadFile(file, metadata);
+        closeModal();
         this.clearFile();
       }
     }
